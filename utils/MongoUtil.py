@@ -1,18 +1,22 @@
-# coding:utf-8
-"""
-mongo操作工具
-"""
+# -*- coding: utf-8 -*-
+'''
+@author: tieqiang Xu
+@mail: 805349916@qq.com
+'''
 
 import os
 from pymongo import MongoClient
-import configs.Settings as Settings
+from pymongo import ReturnDocument
+import configs.Setting as Setting
 import time
 import datetime
 import traceback
-from utils.LogUtils import log
+from utils.LogUtil import Log
 
-class MongoUtils():
-
+class MongoUtil():
+    '''
+    mongo操作工具
+    '''
     def __init__(self, host=None, port=None, db_name=None, mechanism=None, user=None, password=None):
         """
         初始化对象，链接数据库
@@ -25,26 +29,28 @@ class MongoUtils():
         :return: 无返回值
         """
         if host is None:
-            host=Settings.MONGO_HOST
+            host=Setting.MONGO_HOST
         if port is None:
-            port = Settings.MONGO_PORT
+            port = Setting.MONGO_PORT
         if db_name is None:
-            db_name = Settings.MONGO_DB
+            db_name = Setting.MONGO_DB
         if mechanism is None:
-            mechanism = Settings.MONGO_MECHANISM
+            mechanism = Setting.MONGO_MECHANISM
         if user is None:
-            user=Settings.MONGO_USER
+            user=Setting.MONGO_USER
         if password is None:
-            password=Settings.MONGO_PASSWORD
+            password=Setting.MONGO_PASSWORD
         try:
+            Log.d('start connect mongo')
             self.client = None
             self.client = MongoClient(host, int(port))
             self.database = self.client.get_database(db_name)
             if mechanism is not None:
                 self.database.authenticate(user,password,mechanism=mechanism)
+            Log.d('mongo connect success')
         except Exception as e:
             self.close_conn()
-            log.e('init mongo bar failed: %s' % e)
+            Log.e('init mongo bar failed: %s' % e)
 
     def count(self, collection_name, filter_dict=None):
         """
@@ -60,7 +66,7 @@ class MongoUtils():
             tab_size = collection.find(filter_dict).count()
             return tab_size
         except Exception as e:
-            log.e('get table size failed: %s' % e)
+            Log.e('get table size failed: %s' % e)
         finally:
             return tab_size
 
@@ -88,9 +94,9 @@ class MongoUtils():
             collection = self.database.get_collection(collection_name)
             collection.update(filter_dict, update_dict, insert, multi)
             result = True
-            log.d("update success!")
+            Log.d("update success!")
         except Exception as e:
-            log.e('update failed: %s' % e)
+            Log.e('update failed: %s' % e)
             traceback.print_exc()
         finally:
             return result
@@ -121,9 +127,9 @@ class MongoUtils():
             collection = self.database.get_collection(collection_name)
             collection.insert(insert_data)
             result = True
-            log.d("insert success!")
+            Log.d("insert success!")
         except Exception as e:
-            log.e('insert failed: %s' % e)
+            Log.e('insert failed: %s' % e)
         finally:
             return result
 
@@ -139,9 +145,9 @@ class MongoUtils():
             collection = self.database.get_collection(collection_name)
             collection.remove(filter_dict)
             result = True
-            log.d("remove success!")
+            Log.d("remove success!")
         except Exception as e:
-            log.e('remove failed: %s' % e)
+            Log.e('remove failed: %s' % e)
         finally:
             return result
 
@@ -164,9 +170,9 @@ class MongoUtils():
             collection = self.database.get_collection(collection_name)
             collection.replace_one(filter_dict,replace_data)
             result = True
-            log.d("remove success!")
+            Log.d("remove success!")
         except Exception as e:
-            log.e('remove failed: %s' % e)
+            Log.e('remove failed: %s' % e)
         finally:
             return result
 
@@ -184,7 +190,7 @@ class MongoUtils():
             collection = self.database.get_collection(collection_name)
             result = collection.find_one(filter_dict, projection_dict)
         except Exception as e:
-            log.e('find data failed: %s' % e)
+            Log.e('find data failed: %s' % e)
         finally:
             return result
 
@@ -212,11 +218,11 @@ class MongoUtils():
                 else:
                     result = collection.find(filter_dict, projection_dict).skip(skip_index).limit(limit_size)
         except Exception as e:
-            log.e('find data failed: %s' % e)
+            Log.e('find data failed: %s' % e)
         finally:
             return result
 
-    def find_and_update(self, collection_name, filter_dict, update_dict, insert=False, multi=False,auto_uptime=True):
+    def find_one_and_update(self, collection_name, filter_dict, update_dict, upsert=False, auto_uptime=True):
         """
         查找并更新表记录，默认返回false，保证原子性
         :param collection_name: str 集合名
@@ -238,14 +244,44 @@ class MongoUtils():
                 else:
                     update_dict['$set'] = {'uptime': uptime, 'uptimestamp': uptimestamp}
             collection = self.database.get_collection(collection_name)
-            document=collection.find_and_modify(filter_dict, update_dict, insert, multi)
+            document=collection.find_one_and_update(filter_dict, update_dict, upsert=upsert,return_document=ReturnDocument.AFTER)
             result = document
             if result is None:
-                log.i("[INFO] find and update nothing!")
+                Log.i("[INFO] find and update nothing!")
             else:
-                log.d("[INFO] find and update success!")
+                Log.d("[INFO] find and update success!")
         except Exception as e:
-            log.e('find and update failed: %s' % e)
+            Log.e('find and update failed: %s' % e)
+        finally:
+            return result
+
+    def find_one_and_replace(self, collection_name, filter_dict, replace_dict, upsert=False, auto_uptime=True):
+        """
+        查找并更新表记录，默认返回false，保证原子性
+        :param collection_name: str 集合名
+        :param filter_dict: dict 过滤条件，如{'campaignId':{'$in':[1,2,3]}}
+        :param update_dict: dict 更新的字段，如{'$set':{status_key:0，'campaign.status':1},{'$unset':'campaign.name':'test_camp'}}
+        :param insert: bool 如果需要更新的记录不存在是否插入
+        :param multi: bool 是否更新所有符合条件的记录， False则只更新一条，True则更新所有
+        :return: Document 更新成功后的文档
+        """
+        result = None
+        try:
+            if auto_uptime:
+                timestamp = time.time()
+                uptimestamp = int(round(timestamp * 1000))
+                uptime = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                replace_dict['uptime']=uptime
+                replace_dict['uptimestamp'] = uptimestamp
+            collection = self.database.get_collection(collection_name)
+            document=collection.find_one_and_replace(filter_dict, replace_dict, upsert=upsert,return_document=ReturnDocument.AFTER)
+            result = document
+            if result is None:
+                Log.i("[INFO] find and update nothing!")
+            else:
+                Log.d("[INFO] find and update success!")
+        except Exception as e:
+            Log.e('find and update failed: %s' % e)
         finally:
             return result
 
@@ -263,7 +299,14 @@ class MongoUtils():
         """
         if self.client:
             self.client.close()
-            log.d('closed mongo connection')
+            Log.d('closed mongo connection')
+
+    def __del__(self):
+        '''
+        析构方法
+        :return: 无
+        '''
+        self.close_conn()
 
 if __name__ == '__main__':
     '''
@@ -276,6 +319,6 @@ if __name__ == '__main__':
     '''
     insert_data=[{'uptime': '2018-01-25 17:38:33.522000', 'uptimestamp': 1516873113997000.0}]
 
-    mongoUtils = MongoUtils()
+    mongoUtils = MongoUtil()
     mongoUtils.insert(collection_name='res_demo',insert_data=insert_data)
 

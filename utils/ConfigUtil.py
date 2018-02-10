@@ -1,21 +1,35 @@
-# coding:utf-8
+# -*- coding: utf-8 -*-
 '''
-读取ini配置文件
-ini文件结构如下：
-[Section1]
-option1 : value1
-option2 : value2
+@author: tieqiang Xu
+@mail: 805349916@qq.com
 '''
 import configparser
 import os
 
-config = configparser.ConfigParser()
-conf_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..','configs','configs.ini')
-config.read(conf_file,encoding='UTF-8')
 
-class ConfigUtils(object):
+
+class ConfigUtil(object):
+    '''
+    读取ini配置文件
+        ini文件结构如下：
+        [Section1]
+        option1 : value1
+        option2 : value2
+    '''
+
     def __init__(self):
         pass
+
+    @staticmethod
+    def _getConfig():
+        '''
+        获取config对象
+        :return: config对象
+        '''
+        config = configparser.ConfigParser()
+        conf_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'configs', 'config.ini')
+        config.read(conf_file, encoding='UTF-8')
+        return config
 
     @staticmethod
     def getItems(section):
@@ -24,7 +38,7 @@ class ConfigUtils(object):
         :param section: section名
         :return:
         '''
-        return config._sections[section]
+        return __class__._getConfig()._sections[section]
 
     @staticmethod
     def get(section,option):
@@ -34,7 +48,7 @@ class ConfigUtils(object):
         :param option: option名
         :return:object
         '''
-        return config.get(section,option)
+        return __class__._getConfig().get(section,option)
 
     @staticmethod
     def getInt(section,option):
@@ -44,7 +58,7 @@ class ConfigUtils(object):
         :param option:
         :return:int
         '''
-        return config.getint(section,option)
+        return __class__._getConfig().getint(section,option)
 
     @staticmethod
     def getBoolean(section,option):
@@ -54,7 +68,7 @@ class ConfigUtils(object):
         :param option:
         :return:int
         '''
-        return config.getboolean(section,option)
+        return __class__._getConfig().getboolean(section,option)
 
     @staticmethod
     def getFloat(section, option):
@@ -64,8 +78,8 @@ class ConfigUtils(object):
         :param option:
         :return:int
         '''
-        return config.getfloat(section, option)
+        return __class__._getConfig().getfloat(section, option)
 
 if __name__ == '__main__':
-    items=ConfigUtils.getItems('scheduler')
+    items=ConfigUtil.getItems('scheduler')
     print (items)
